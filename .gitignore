@@ -1,0 +1,5 @@
+node_modules
+dist
+rooms/*
+!rooms/.gitkeep
+config.json
