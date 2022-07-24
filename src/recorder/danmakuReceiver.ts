@@ -55,6 +55,10 @@ class DanmakuReceiver extends EventEmitter {
 					printLog(`房间 ${this.roomId} 掉线了`)
 					this.emit('close')
 				})
+				this.socket.on('error', () => {
+					printLog(`房间 ${this.roomId} 掉线了`)
+					this.emit('close')
+				})
 				this.socket.on('open', async () => {
 					// 生成并发送验证包
 					const data = JSON.stringify({

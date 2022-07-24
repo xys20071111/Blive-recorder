@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { WriteStream, createWriteStream } from 'fs'
 import https from 'https'
 import { EventEmitter } from 'events'
@@ -48,6 +49,9 @@ class Recorder extends EventEmitter {
 					
 				})
 				urlReq.on('response', (stream) => {
+					stream.on('error', () => {
+						this.emit('RecordStop', 0)
+					})
 					switch(stream.statusCode) {
 					case 302:
 						// eslint-disable-next-line no-case-declarations
@@ -62,14 +66,23 @@ class Recorder extends EventEmitter {
 							},
 						})
 						streamReq.on('response', (liveStream) => {
+							liveStream.on('error', () => {
+								this.emit('RecordStop', 0)
+							})
 							record(liveStream, this.roomId, this.outputStream, this.isFirstMeta, this)
 							this.isFirstMeta = false
+						})
+						streamReq.on('error', () => {
+							this.emit('RecordStop', 0)
 						})
 						break
 					case 200:
 						record(stream, this.roomId, this.outputStream, this.isFirstMeta, this)
 						this.isFirstMeta = false
 					}
+				})
+				urlReq.on('error', () => {
+					this.emit('RecordStop', 0)
 				})
 				urlReq.end()
 			})

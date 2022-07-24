@@ -31,6 +31,7 @@ module.exports = {
 		'semi': [
 			'error',
 			'never'
-		]
+		],
+		'no-empty-function': 'off'
 	}
 }
