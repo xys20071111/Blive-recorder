@@ -30,6 +30,9 @@ function request(path: string, method: 'GET' | 'POST', data: object): Promise<an
 			path: method === 'POST'? path : pathBuilder(path, data),
 			headers: method === 'POST'? POST_HEADER : GET_HEADER
 		})
+		req.on('error',() => {
+			reject(2)
+		})
 		req.on('response', (stream) => {
 			if (stream.statusCode !== 200) {
 				stream.resume()
@@ -39,8 +42,14 @@ function request(path: string, method: 'GET' | 'POST', data: object): Promise<an
 			stream.setEncoding('utf-8')
 			stream.on('data', (chunk) => responseJson += chunk)
 			stream.on('end', () => {
-				const responseObject = JSON.parse(responseJson)
-				resolve(responseObject)
+				try {
+					const responseObject = JSON.parse(responseJson)
+					resolve(responseObject)
+				} catch (e) {
+					request(path, method, data).then((data) => {
+						resolve(data)
+					})
+				}
 			})
 		})
 		if (method === 'POST') {

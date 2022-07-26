@@ -2,8 +2,8 @@
 import { WriteStream, createWriteStream } from 'fs'
 import https from 'https'
 import { EventEmitter } from 'events'
-import { request, getTimeString } from '../utils'
-import { Msg, RoomInfo, StreamInfoArray } from '../IMsg'
+import { request, getTimeString, printLog } from '../utils'
+import { Msg, StreamInfoArray } from '../IMsg'
 import { IncomingMessage } from 'http'
 import { FlvPacketAudio, FlvPacketMetadata, FlvPacketVideo, FlvStreamParser } from 'node-flv'
 
@@ -12,126 +12,113 @@ class Recorder extends EventEmitter {
 	private outputFile:string
 	private outputStream: WriteStream
 	private isFirstMeta = true
+	private isFirstHeader = true
+	private lastClipA = new Set<number>()
+	private lastClipV = new Set<number>()
 
 	constructor(roomId: number, outputPath: string) {
 		super()
 		this.roomId = roomId
 		this.outputFile = `${outputPath}/${getTimeString()}.flv`
-		this.outputStream = createWriteStream(this.outputFile)
+		this.outputStream = createWriteStream(this.outputFile, {flags: 'a', encoding: 'binary'})
 	}
 
-	start(): void {
-		request('/room/v1/Room/room_init', 'GET', {
-			id: this.roomId,
-		}).then((data: Msg) => {
-			const roomInfo: RoomInfo = data.data as RoomInfo
-			if (roomInfo.live_status !== 1) {
-				console.error(`房间 ${this.roomId} 直播未开始`)
-				return
-			}
-			const cid = roomInfo.room_id
-
-			request('/room/v1/Room/playUrl', 'GET', {
-				cid,
-				quality: 4
-			}).then(async (data: Msg) => {
-				const streamUrl: string = (data.data as unknown as StreamInfoArray)['durl'][0]['url']
-				const urlReq = https.request(streamUrl,{
-					method: 'GET',
-					agent: new https.Agent({keepAlive: true, keepAliveMsecs: 259200000}),
+	async start() {
+		const data: Msg = await request('/room/v1/Room/playUrl', 'GET', {
+			cid: this.roomId,
+			quality: 4
+		})
+		const streamUrl: string = (data.data as unknown as StreamInfoArray)['durl'][0]['url']
+		const urlReq = https.request(streamUrl,{
+			method: 'GET',
+			headers: {
+				'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.9999.0 Safari/537.36',
+				'Referer': 'https://live.bilibili.com',
+				'Origin': 'https://live.bilibili.com',
+			}				
+		})
+		urlReq.on('response', (stream) => {
+			stream.on('error', () => {
+				this.emit('RecordStop', 0)
+			})
+			switch(stream.statusCode) {
+			case 302:
+				// eslint-disable-next-line no-case-declarations
+				const streamReq = https.get(stream.headers.location as string,{
 					headers: {
-						'Accept': '*/*',
 						'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.9999.0 Safari/537.36',
 						'Referer': 'https://live.bilibili.com',
 						'Origin': 'https://live.bilibili.com',
-						'TE': 'trailers'
 					},
-					
 				})
-				urlReq.on('response', (stream) => {
-					stream.on('error', () => {
-						this.emit('RecordStop', 0)
+				streamReq.on('response', (liveStream) => {
+					liveStream.on('error', () => {
+						this.emit('RecordStop', 1)
 					})
-					switch(stream.statusCode) {
-					case 302:
-						// eslint-disable-next-line no-case-declarations
-						const streamReq = https.get(stream.headers.location as string,{
-							agent: new https.Agent({keepAlive: true, keepAliveMsecs: 259200000}),
-							headers: {
-								'Accept': '*/*',
-								'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.9999.0 Safari/537.36',
-								'Referer': 'https://live.bilibili.com',
-								'Origin': 'https://live.bilibili.com',
-								'TE': 'trailers',
-							},
-						})
-						streamReq.on('response', (liveStream) => {
-							liveStream.on('error', () => {
-								this.emit('RecordStop', 0)
-							})
-							record(liveStream, this.roomId, this.outputStream, this.isFirstMeta, this)
-							this.isFirstMeta = false
-						})
-						streamReq.on('error', () => {
-							this.emit('RecordStop', 0)
-						})
-						break
-					case 200:
-						record(stream, this.roomId, this.outputStream, this.isFirstMeta, this)
-						this.isFirstMeta = false
-					}
+					this.record(liveStream, this.roomId, this.outputStream)
+					this.isFirstMeta = false
 				})
-				urlReq.on('error', () => {
-					this.emit('RecordStop', 0)
+				streamReq.on('error', (err) => {
+					console.log(err)
+					this.emit('RecordStop', 1)
 				})
-				urlReq.end()
-			})
-
+				break
+			case 200:
+				this.record(stream, this.roomId, this.outputStream)
+				this.isFirstMeta = false
+				break
+			case 404:
+				printLog(`无法访问 ${this.roomId} 直播流 错误码: ${stream.statusCode}`)
+				this.emit('RecordStop', 1)
+			}
+		})
+		urlReq.on('error', (err) => {
+			console.log(err)
+			this.emit('RecordStop', 1)
+		})
+		urlReq.end()
+	}
+	record(liveStream: IncomingMessage, roomId: number, outputStream: WriteStream) {
+		if (liveStream.statusCode !== 200) {
+			printLog(`无法访问 ${roomId} 直播流 错误码: ${liveStream.statusCode}`)
+			this.emit('RecordStop', liveStream.statusCode)
+			return
+		}
+		const flvStream = new FlvStreamParser()
+		flvStream.on('flv-header', (flvPacket: FlvPacketMetadata) => {
+			if(this.isFirstHeader)	{
+				outputStream.write(flvPacket.build())
+				this.isFirstHeader = false
+			}
+		})
+		flvStream.on('flv-packet-metadata', (flvPacket: FlvPacketMetadata) => {
+			if(this.isFirstMeta)	{
+				outputStream.write(flvPacket.build())
+				this.isFirstMeta = false
+			}
+		})
+		flvStream.on('flv-packet-audio', (flvPacket: FlvPacketAudio) => {
+			const packet = flvPacket.build()
+			if(!this.lastClipA.has(flvPacket.header.timestampLower)) {
+				outputStream.write(packet)
+			}
+			this.lastClipA.add(flvPacket.header.timestampLower)
+		})
+		flvStream.on('flv-packet-video', (flvPacket: FlvPacketVideo) => {
+			const packet = flvPacket.build()
+			if(!this.lastClipV.has(flvPacket.header.timestampLower)) {
+				outputStream.write(packet)
+			}
+			this.lastClipV.add(flvPacket.header.timestampLower)
+		})
+		this.emit('RecordStart')
+		liveStream.on('data', (chunk) => {
+			flvStream.write(chunk)
+		})
+		liveStream.on('end', () => {
+			this.emit('RecordStop', 0)
 		})
 	}
-}
-
-const lastClipA = new Set<number>()
-const lastClipV = new Set<number>()
-function record(liveStream: IncomingMessage, roomId: number, outputStream: WriteStream, isFirstMeta: boolean,emitter: EventEmitter) {
-	if (liveStream.statusCode !== 200) {
-		console.error(`无法访问 ${roomId} 直播流 错误码: ${liveStream.statusCode}`)
-		emitter.emit('RecordStop', liveStream.statusCode)
-		return
-	}
-	const flvStream = new FlvStreamParser()
-	flvStream.on('flv-header', (flvPacket: FlvPacketMetadata) => {
-		if(isFirstMeta)	{
-			outputStream.write(flvPacket.build())
-		}
-	})
-	flvStream.on('flv-packet-metadata', (flvPacket: FlvPacketMetadata) => {
-		if(isFirstMeta)	{
-			outputStream.write(flvPacket.build())
-		}
-	})
-	flvStream.on('flv-packet-audio', (flvPacket: FlvPacketAudio) => {
-		const packet = flvPacket.build()
-		if(lastClipA.has(flvPacket.header.timestampLower)) {
-			return
-		} else {
-			outputStream.write(packet)
-		}
-		lastClipA.add(flvPacket.header.timestampLower)
-	})
-	flvStream.on('flv-packet-video', (flvPacket: FlvPacketVideo) => {
-		const packet = flvPacket.build()
-		if(lastClipV.has(flvPacket.header.timestampLower)) {
-			return
-		} else {
-			outputStream.write(packet)
-		}
-		lastClipV.add(flvPacket.header.timestampLower)
-	})
-	emitter.emit('RecordStart')
-	liveStream.pipe(flvStream).on('close', () => {
-		emitter.emit('RecordStop', 0)
-	})
 }
 
 export default Recorder

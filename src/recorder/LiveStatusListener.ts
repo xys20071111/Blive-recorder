@@ -2,7 +2,7 @@ import EventEmitter from 'events'
 import DanmakuReceiver from './danmakuReceiver'
 import { RoomConfig } from '../IConfig'
 import { Msg, RoomInfo } from '../IMsg'
-import { request } from '../utils'
+import { printLog, request } from '../utils'
 
 export default class LiveStatusLinstener extends EventEmitter{
 	private room: RoomConfig
@@ -12,15 +12,18 @@ export default class LiveStatusLinstener extends EventEmitter{
 	constructor(room: RoomConfig) {
 		super()
 		this.room = room
+		this.createRoom()
+	}
+	public createRoom() {
 		request('/room/v1/Room/room_init', 'GET', {
-			id: room.displayRoomId
+			id: this.room.displayRoomId
 		}).then((data: Msg) => {
 			const roomInfo: RoomInfo = data.data as RoomInfo
 			if (roomInfo.live_status === 1) {
 				this.emit('LiveStart')
 			}
-			this.danmakuReceiver = new DanmakuReceiver(room.realRoomId)
-			this.danmakuReceiver.once('LIVE', () => {
+			this.danmakuReceiver = new DanmakuReceiver(this.room.realRoomId)
+			this.danmakuReceiver.on('LIVE', () => {
 				if(this.livingFlag) {
 					return
 				}
@@ -37,10 +40,12 @@ export default class LiveStatusLinstener extends EventEmitter{
 					this.danmakuReceiver.connect()
 			})
 			this.danmakuReceiver.connect()
+		}).catch(() => {
+			this.createRoom()
 		})
 	}
-
 	public tryRestartRecording() {
+		printLog(`尝试恢复房间 ${this.room.displayRoomId} 的录制`)
 		request('/room/v1/Room/room_init', 'GET', {
 			id: this.room.displayRoomId
 		}).then((data: Msg) => {

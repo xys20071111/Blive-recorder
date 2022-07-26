@@ -3,3 +3,6 @@ dist
 rooms/*
 !rooms/.gitkeep
 config.json
+
+*.flv
+test.mjs
