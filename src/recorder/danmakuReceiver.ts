@@ -108,7 +108,6 @@ class DanmakuReceiver extends EventEmitter {
 				const heartbeatPayload = '陈睿你妈死了'
 				if (this.socket) {
 					this.socket.send(this.generatePacket(1, 2, heartbeatPayload))
-					printLog(`房间 ${this.roomId} 发送心跳`)
 				}
 			}, 30000)
 			this.emit('connected')

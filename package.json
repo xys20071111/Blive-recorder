@@ -20,5 +20,10 @@
     "@typescript-eslint/parser": "^5.30.7",
     "eslint": "^8.20.0",
     "typescript": "^4.7.3"
-  }
+  },
+  "scripts": {
+    "start": "node . config.json",
+    "prepack": "tsc"
+  },
+  "files": ["dist", "rooms"]
 }

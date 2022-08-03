@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from 'fs'
+import { AppConfig } from './IConfig'
 import App from './App'
 import { initRoomRecorder } from './recorder/Rooms'
 
@@ -8,4 +9,4 @@ readdirSync('./rooms').forEach((v) => {
 	}
 })
 
-App.listen(4311)
+App.listen(AppConfig.port)

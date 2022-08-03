@@ -6,3 +6,6 @@ config.json
 
 *.flv
 test.mjs
+
+*.tgz
+*.tar.gz

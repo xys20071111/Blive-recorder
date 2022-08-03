@@ -2,6 +2,7 @@ import { readFileSync } from 'fs'
 
 export interface ProgramConfig {
 	output: string
+	port: number
 }
 
 export interface RoomConfig {
