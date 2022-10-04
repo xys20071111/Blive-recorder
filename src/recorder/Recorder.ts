@@ -31,6 +31,8 @@ class Recorder extends EventEmitter {
 			this.outputStream = createWriteStream(this.outputFile, { flags: 'a', encoding: 'binary' })
 			this.isFirstHeader = true
 			this.isFirstMeta = true
+			this.lastClipA.clear()
+			this.lastClipV.clear()
 		}
 		const data: Msg = await request('/room/v1/Room/playUrl', 'GET', {
 			cid: this.roomId,
