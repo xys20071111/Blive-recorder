@@ -69,6 +69,11 @@ class DanmakuReceiver extends EventEmitter {
 						this.socket.send(authPacket)
 						printLog(`房间 ${this.roomId} 成功连接到弹幕服务器, 发送身份验证包`)
 					}
+					//每隔30分钟就断线重连一次
+					setTimeout(() => {
+						console.log('主动断线重连')
+						this.close()
+					}, 1800000)
 				})
 			})
 		})

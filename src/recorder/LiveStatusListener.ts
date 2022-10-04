@@ -7,7 +7,7 @@ import { printLog, request } from '../utils'
 export default class LiveStatusLinstener extends EventEmitter{
 	private room: RoomConfig
 	private danmakuReceiver: DanmakuReceiver | undefined
-	private livingFlag = false
+	private counter = 0
 
 	constructor(room: RoomConfig) {
 		super()
@@ -24,15 +24,15 @@ export default class LiveStatusLinstener extends EventEmitter{
 			}
 			this.danmakuReceiver = new DanmakuReceiver(this.room.realRoomId)
 			this.danmakuReceiver.on('LIVE', () => {
-				if(this.livingFlag) {
+				if(this.counter === 0) {
+					this.counter++
 					return
 				}
-				this.emit('LiveStart')
-				this.livingFlag = true
+				this.emit('LiveStart', true)
 			})
 			this.danmakuReceiver.on('PREPARING', () => {
+				this.counter = 0
 				this.emit('LiveEnd')
-				this.livingFlag = false
 			})
 			this.danmakuReceiver.on('close', () => {
 				this.tryRestartRecording()
@@ -51,7 +51,7 @@ export default class LiveStatusLinstener extends EventEmitter{
 		}).then((data: Msg) => {
 			const roomInfo: RoomInfo = data.data as RoomInfo
 			if (roomInfo.live_status === 1) {
-				this.emit('LiveStart')
+				this.emit('LiveStart', false)
 				return
 			}
 			this.emit('LiveEnd')
