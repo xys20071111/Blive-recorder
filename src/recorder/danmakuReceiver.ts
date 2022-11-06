@@ -7,18 +7,18 @@ import * as zlib from 'zlib'
 import { printLog } from '../utils'
 
 enum DANMAKU_PROTOCOL {
-  JSON = 0,
-  HEARTBEAT,
-  ZIP,
-  BROTLI
+	JSON = 0,
+	HEARTBEAT,
+	ZIP,
+	BROTLI
 }
 
 enum DANMAKU_TYPE {
-  HEARTBEAT = 2,
-  HEARTBEAT_REPLY = 3,
-  DATA = 5,
-  AUTH = 7,
-  AUTH_REPLY = 8
+	HEARTBEAT = 2,
+	HEARTBEAT_REPLY = 3,
+	DATA = 5,
+	AUTH = 7,
+	AUTH_REPLY = 8
 }
 
 class DanmakuReceiver extends EventEmitter {
@@ -51,7 +51,7 @@ class DanmakuReceiver extends EventEmitter {
 				// 连接弹幕服务器
 				this.socket = new WebSocket(`wss://${parsedData.data.host_server_list[0].host}:${parsedData.data.host_server_list[0].wss_port}/sub`)
 				this.socket.on('message', this.danmakuProcesser.bind(this))
-				this.socket.on('close', () => { 
+				this.socket.on('close', () => {
 					printLog(`房间 ${this.roomId} 掉线了`)
 					this.emit('close')
 				})
@@ -107,20 +107,25 @@ class DanmakuReceiver extends EventEmitter {
 			// 心跳包，不做处理
 			break
 		case DANMAKU_TYPE.AUTH_REPLY:
+		{
 			printLog(`房间 ${this.roomId} 通过认证`)
 			// 认证通过，每30秒发一次心跳包
-			setInterval(() => {
+			const heartbeat = setInterval(() => {
 				const heartbeatPayload = '陈睿你妈死了'
-				if (this.socket) {
+				if (this.socket && this.socket.readyState === WebSocket.OPEN) {
 					this.socket.send(this.generatePacket(1, 2, heartbeatPayload))
+				} else {
+					clearInterval(heartbeat)
+					this.emit('close')
 				}
 			}, 30000)
 			this.emit('connected')
 			break
+		}
 		case DANMAKU_TYPE.DATA:
 			switch (packetProtocol) {
 			case DANMAKU_PROTOCOL.JSON:
-			// 这些数据大都没用，但还是留着吧
+				// 这些数据大都没用，但还是留着吧
 				jsonData = JSON.parse(packetPayload.toString('utf-8'))
 				this.emit(jsonData.cmd, jsonData.data)
 				break

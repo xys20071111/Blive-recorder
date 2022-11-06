@@ -40,6 +40,7 @@ export default class LiveStatusLinstener extends EventEmitter{
 					this.danmakuReceiver.connect()
 			})
 			this.danmakuReceiver.connect()
+			this.tryRestartRecording()
 		}).catch(() => {
 			this.createRoom()
 		})
