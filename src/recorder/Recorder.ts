@@ -24,20 +24,7 @@ class Recorder extends EventEmitter {
 		this.outputFile = `${outputPath}/${getTimeString()}.flv`
 	}
 
-	public createFileStream() {
-		console.log('创建新文件')
-		this.outputFile = `${this.outputPath}/${getTimeString()}.flv`
-		this.outputStream = createWriteStream(this.outputFile, { flags: 'a', encoding: 'binary' })
-		this.isFirstHeader = true
-		this.isFirstMeta = true
-		this.lastClipA.clear()
-		this.lastClipV.clear()
-	}
-
 	async start(isNewLive: boolean) {
-		if (isNewLive) {
-			this.createFileStream()
-		}
 		const data = (await request('/xlive/web-room/v2/index/getRoomPlayInfo', 'GET', {
 			room_id:this.roomId,
 			no_playurl:0,
