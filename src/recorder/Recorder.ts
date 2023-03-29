@@ -68,7 +68,7 @@ class Recorder extends EventEmitter {
 			streamUrl,
 			'-c:v', 'copy',
 			'-c:a', 'copy',
-			`${this.outputPath}/${getTimeString()}.flv`
+			`${this.outputPath}/${getTimeString()}.m3u8`
 		])
 		task.on('exit', () => {
 			this.emit('RecordStop', 1)
