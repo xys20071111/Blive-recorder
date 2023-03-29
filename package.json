@@ -7,8 +7,6 @@
   "private": false,
   "dependencies": {
     "express": "^4.18.1",
-    "follow-redirects": "^1.15.1",
-    "node-flv": "^0.9.11",
     "ws": "^8.8.0"
   },
   "devDependencies": {
