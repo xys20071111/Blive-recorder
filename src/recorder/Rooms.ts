@@ -37,9 +37,6 @@ class Room {
 		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}/${config.name}-${config.displayRoomId}`)
 		this.recorder.on('RecordStop', (code) => {
 			this.isRecording = false
-			if (code === 2) {
-				this.recorder?.createFileStream()
-			}
 			this.liveStatusListener.tryRestartRecording()
 			printLog(`房间 ${config.displayRoomId} 录制结束`)
 		})

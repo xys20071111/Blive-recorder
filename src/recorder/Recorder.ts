@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { WriteStream, createWriteStream } from 'fs'
+import { WriteStream, createWriteStream, mkdir, mkdirSync, existsSync } from 'fs'
 import https from 'https'
 import { EventEmitter } from 'events'
 import { request, getTimeString, printLog } from '../utils'
@@ -10,18 +10,11 @@ import { spawn } from 'child_process'
 class Recorder extends EventEmitter {
 	private roomId: number
 	private outputPath: string
-	private outputFile: string
-	private outputStream?: WriteStream
-	private isFirstMeta = true
-	private isFirstHeader = true
-	private lastClipA = new Set<number>()
-	private lastClipV = new Set<number>()
 
 	constructor(roomId: number, outputPath: string) {
 		super()
 		this.roomId = roomId
 		this.outputPath = outputPath
-		this.outputFile = `${outputPath}/${getTimeString()}.flv`
 	}
 
 	async start(isNewLive: boolean) {
@@ -46,6 +39,13 @@ class Recorder extends EventEmitter {
 			}
 		}
 		const streamUrl = `${streamHost}${streamPath}${streamParma}`
+		if(!existsSync(this.outputPath)) {
+			try {
+				mkdirSync(this.outputPath, {
+					recursive: true
+				})
+			} catch {}
+		}
 		const task = spawn('ffmpeg', [
 			'-headers',
 			'Accept: */*\r\nAccept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\nAccept-Encoding: gzip, deflate, br\r\nReferer: https://live.bilibili.com/\r\nOrigin: https://live.bilibili.com\r\nDNT: 1\r\nConnection: keep-alive\r\nSec-Fetch-Dest: empty\r\nSec-Fetch-Mode: cors\r\nSec-Fetch-Site: cross-site\r\nSec-GPC: 1\r\nPragma: no-cache\r\nCache-Control: no-cache\r\nTE: trailers',
@@ -55,6 +55,8 @@ class Recorder extends EventEmitter {
 			streamUrl,
 			'-c:v', 'copy',
 			'-c:a', 'copy',
+			'-hls_list_size', '0',
+			'-hls_time', '2',
 			`${this.outputPath}/${getTimeString()}.m3u8`
 		])
 		task.on('exit', () => {
