@@ -8,6 +8,7 @@ export default class LiveStatusLinstener extends EventEmitter{
 	private room: RoomConfig
 	private danmakuReceiver: DanmakuReceiver | undefined
 	private counter = 0
+	private isLiving = false
 
 	constructor(room: RoomConfig) {
 		super()
@@ -52,10 +53,12 @@ export default class LiveStatusLinstener extends EventEmitter{
 		}).then((data: Msg) => {
 			const roomInfo: RoomInfo = data.data as RoomInfo
 			if (roomInfo.live_status === 1) {
-				this.emit('LiveStart', false)
+				this.emit('LiveStart', !this.isLiving)
+				this.isLiving = true
 				return
 			}
 			this.emit('LiveEnd')
+			this.isLiving = false
 		})
 	}
 

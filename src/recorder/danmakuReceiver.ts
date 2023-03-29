@@ -31,7 +31,7 @@ class DanmakuReceiver extends EventEmitter {
 
 	public async connect() {
 		// 请求弹幕服务器地址
-		const request = https.request(`https://api.live.bilibili.com/room/v1/Danmu/getConf?room_id=${this.roomId}&platform=pc&player=web`, {
+		const request = https.request(`https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id=${this.roomId}&type=0`, {
 			method: 'GET',
 			headers: {
 				'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
@@ -47,9 +47,9 @@ class DanmakuReceiver extends EventEmitter {
 			let rawData = ''
 			response.on('data', (chunk) => { rawData += chunk })
 			response.on('end', () => {
-				const parsedData = JSON.parse(rawData)
+				const roomConfig = JSON.parse(rawData)
 				// 连接弹幕服务器
-				this.socket = new WebSocket(`wss://${parsedData.data.host_server_list[0].host}:${parsedData.data.host_server_list[0].wss_port}/sub`)
+				this.socket = new WebSocket(`wss://${roomConfig.data.host_list[0].host}:${roomConfig.data.host_list[0].wss_port}/sub`)
 				this.socket.on('message', this.danmakuProcesser.bind(this))
 				this.socket.on('close', () => {
 					printLog(`房间 ${this.roomId} 掉线了`)
@@ -62,7 +62,7 @@ class DanmakuReceiver extends EventEmitter {
 				this.socket.on('open', async () => {
 					// 生成并发送验证包
 					const data = JSON.stringify({
-						roomid: this.roomId, protover: 3, platform: 'web', uid: 0, key: parsedData.data.token,
+						roomid: this.roomId, protover: 3, platform: 'web', uid: 0, key: roomConfig.data.token,
 					})
 					const authPacket = this.generatePacket(1, 7, data)
 					if (this.socket && this.socket.readyState === WebSocket.OPEN) {

@@ -38,11 +38,27 @@ class Recorder extends EventEmitter {
 		if (isNewLive) {
 			this.createFileStream()
 		}
-		const data: Msg = await request('/room/v1/Room/playUrl', 'GET', {
-			cid: this.roomId,
-			quality: 4
-		})
-		const streamUrl: string = (data.data as unknown as StreamInfoArray)['durl'][0]['url']
+		const data = (await request('/xlive/web-room/v2/index/getRoomPlayInfo', 'GET', {
+			room_id:25755118,
+			no_playurl:0,
+			mask:1,
+			qn:0,
+			platform:'web',
+			protocol:'0,1',
+			format:'0,2',
+			codec:'0,1'
+		})).data
+		let streamHost: string = '';
+		let streamParma: string = '';
+		let streamPath: string  = '';
+		for(const item of data.playurl_info.playurl.stream) {
+			if (item.protocol_name === 'http_stream') {
+				streamHost = item.format[0].codec[0].url_info[0].host
+				streamParma = item.format[0].codec[0].url_info[0].extra
+				streamPath = item.format[0].codec[0].base_url
+			}
+		}
+		const streamUrl = `${streamHost}${streamPath}?${streamParma}`
 		const urlReq = https.request(streamUrl, {
 			method: 'GET',
 			headers: {
@@ -55,49 +71,7 @@ class Recorder extends EventEmitter {
 			stream.on('error', () => {
 				this.emit('RecordStop', 0)
 			})
-			switch (stream.statusCode) {
-			case 302:
-				// eslint-disable-next-line no-case-declarations
-				const streamReq = https.get(stream.headers.location as string, {
-					headers: {
-						'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.9999.0 Safari/537.36',
-						'Referer': 'https://live.bilibili.com',
-						'Origin': 'https://live.bilibili.com',
-					},
-				})
-				streamReq.on('response', (liveStream) => {
-					liveStream.on('error', () => {
-						this.emit('RecordStop', 1)
-					})
-					if (this.outputStream) {
-						this.record(liveStream, this.roomId, this.outputStream)
-						this.isFirstMeta = false
-					} else {
-						console.log('没有输出流')
-						this.emit('RecordStop', 2)
-					}
-					
-				})
-				streamReq.on('error', (err) => {
-					console.log(err)
-					this.emit('RecordStop', 1)
-				})
-				break
-			case 200:
-				if (this.outputStream) {
-					this.record(stream, this.roomId, this.outputStream)
-					this.isFirstMeta = false
-				} else {
-					console.log('没有输出流')
-					this.emit('RecordStop', 2)
-				}
-				break
-			case 404:
-				printLog(`无法访问 ${this.roomId} 直播流 错误码: ${stream.statusCode}`)
-				setTimeout(() => {
-					this.emit('RecordStop', 1)
-				}, 1000)
-			}
+			this.record(stream, this.roomId, this.outputStream as WriteStream)
 		})
 		urlReq.on('error', (err) => {
 			console.log(err)
@@ -108,7 +82,7 @@ class Recorder extends EventEmitter {
 	record(liveStream: IncomingMessage, roomId: number, outputStream: WriteStream) {
 		if (liveStream.statusCode !== 200) {
 			printLog(`无法访问 ${roomId} 直播流 错误码: ${liveStream.statusCode}`)
-			this.emit('RecordStop', liveStream.statusCode)
+			this.emit('RecordStop', 1)
 			return
 		}
 		const flvStream = new FlvStreamParser()
@@ -139,9 +113,10 @@ class Recorder extends EventEmitter {
 			this.lastClipV.add(flvPacket.header.timestampLower)
 		})
 		this.emit('RecordStart')
-		liveStream.pipe(flvStream).on('end', () => {
+		liveStream.on('end', () => {
 			this.emit('RecordStop', 0)
 		})
+		liveStream.pipe(flvStream)
 	}
 }
 
