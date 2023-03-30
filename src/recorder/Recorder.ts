@@ -36,7 +36,7 @@ class Recorder extends EventEmitter {
 
 	async start() {
 		this.createFileStream()
-		this.outputFileStream!.write('#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-START:TIME-OFFSET=0\n#EXT-X-TARGETDURATION:1')
+		this.outputFileStream!.write('#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-START:TIME-OFFSET=0\n#EXT-X-TARGETDURATION:1\n')
 		const data = (await request('/xlive/web-room/v2/index/getRoomPlayInfo', 'GET', {
 			room_id: this.roomId,
 			no_playurl: 0,
