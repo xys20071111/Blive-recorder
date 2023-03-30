@@ -70,6 +70,7 @@ class Recorder extends EventEmitter {
 			m3u8Req.on('response', (m3u8Res) => {
 				if (m3u8Res.statusCode !== 200 && m3u8Res.statusCode !== 206) {
 					m3u8Res.resume()
+					clearInterval(recordInterval)
 					this.emit('RecordStop', 1)
 					return
 				}
@@ -89,7 +90,7 @@ class Recorder extends EventEmitter {
 						})
 					}
 					for (const item of m3u8.clips) {
-						if (item.filename) {
+						if (item.filename && !this.clipList.includes(item.filename)) {
 							this.clipList.push(item.filename)
 							this.outputFileStream!.write(`${item.info}\n${this.clipDir}${item.filename}\n`)
 							downloadFile(streamUrl.replace('index.m3u8', item.filename), `${this.clipDir}${item.filename}`, {
