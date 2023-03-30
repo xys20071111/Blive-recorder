@@ -15,7 +15,7 @@ class Room {
 		this.liveStatusListener = new LiveStatusLinstener(config)
 		this.createNewRecorder(config)
 		this.liveStatusListener.on('LiveStart', (isNewLive: boolean) => {
-			this.recorder?.start(isNewLive)
+			this.recorder?.start()
 			if(isNewLive) {
 				printLog(`房间 ${config.displayRoomId} 开始直播`)
 				this.isLiving = true
@@ -34,7 +34,7 @@ class Room {
 		return this.isRecording
 	}
 	private createNewRecorder(config: RoomConfig) {
-		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}/${config.name}-${config.displayRoomId}`)
+		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}${config.name}-${config.displayRoomId}`)
 		this.recorder.on('RecordStop', (code) => {
 			this.isRecording = false
 			if (code === 2) {
@@ -56,8 +56,8 @@ class Room {
 const roomMap = new Map<number, Room>()
 
 export function initRoomRecorder(config: RoomConfig) {
-	if (!existsSync(`${AppConfig.output}/${config.name}-${config.displayRoomId}`)) {
-		mkdirSync(`${AppConfig.output}/${config.name}-${config.displayRoomId}`)
+	if (!existsSync(`${AppConfig.output}${config.name}-${config.displayRoomId}`)) {
+		mkdirSync(`${AppConfig.output}${config.name}-${config.displayRoomId}`)
 	}
 	if (!roomMap.has(config.displayRoomId))
 		roomMap.set(config.displayRoomId, new Room(config))
