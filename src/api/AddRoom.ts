@@ -43,7 +43,7 @@ export function addRoom(req: Request, res: Response) {
 				displayRoomId
 			}
 			writeFileSync(`./rooms/${roomIdString}.json`, JSON.stringify(config))
-			mkdirSync(`${AppConfig.output}/${info.uname}-${displayRoomId}`)
+			mkdirSync(`${AppConfig.output}${info.uname}-${displayRoomId}`)
 			initRoomRecorder(config)
 			res.json({
 				code: 0

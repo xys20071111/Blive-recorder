@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { WriteStream, createWriteStream, mkdir, mkdirSync, existsSync } from 'fs'
-import https from 'https'
+import { mkdirSync, existsSync } from 'fs'
 import { EventEmitter } from 'events'
-import { request, getTimeString, printLog } from '../utils'
-import { IncomingMessage } from 'http'
+import { request, getTimeString } from '../utils'
 import { spawn } from 'child_process'
 
 
@@ -41,9 +39,7 @@ class Recorder extends EventEmitter {
 		const streamUrl = `${streamHost}${streamPath}${streamParma}`
 		if(!existsSync(this.outputPath)) {
 			try {
-				mkdirSync(this.outputPath, {
-					recursive: true
-				})
+				mkdirSync(this.outputPath)
 			} catch {}
 		}
 		const task = spawn('ffmpeg', [

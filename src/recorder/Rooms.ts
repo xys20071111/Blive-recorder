@@ -34,7 +34,7 @@ class Room {
 		return this.isRecording
 	}
 	private createNewRecorder(config: RoomConfig) {
-		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}/${config.name}-${config.displayRoomId}`)
+		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}${config.name}-${config.displayRoomId}`)
 		this.recorder.on('RecordStop', (code) => {
 			this.isRecording = false
 			this.liveStatusListener.tryRestartRecording()
@@ -53,8 +53,8 @@ class Room {
 const roomMap = new Map<number, Room>()
 
 export function initRoomRecorder(config: RoomConfig) {
-	if (!existsSync(`${AppConfig.output}/${config.name}-${config.displayRoomId}`)) {
-		mkdirSync(`${AppConfig.output}/${config.name}-${config.displayRoomId}`)
+	if (!existsSync(`${AppConfig.output}${config.name}-${config.displayRoomId}`)) {
+		mkdirSync(`${AppConfig.output}${config.name}-${config.displayRoomId}`)
 	}
 	if (!roomMap.has(config.displayRoomId))
 		roomMap.set(config.displayRoomId, new Room(config))
