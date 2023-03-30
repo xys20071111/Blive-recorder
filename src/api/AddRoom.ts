@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { AppConfig, RoomConfig } from '../IConfig'
 import { BroadcasterInfoRoot, Msg, RoomInfo } from '../IMsg'
 import { initRoomRecorder } from '../recorder/Rooms'
@@ -43,7 +43,9 @@ export function addRoom(req: Request, res: Response) {
 				displayRoomId
 			}
 			writeFileSync(`./rooms/${roomIdString}.json`, JSON.stringify(config))
-			mkdirSync(`${AppConfig.output}/${info.uname}-${displayRoomId}`)
+			if(!existsSync(`${AppConfig.output}${info.uname}-${displayRoomId}`)){
+				mkdirSync(`${AppConfig.output}${info.uname}-${displayRoomId}`)
+			}
 			initRoomRecorder(config)
 			res.json({
 				code: 0

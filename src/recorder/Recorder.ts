@@ -71,6 +71,8 @@ class Recorder extends EventEmitter {
 				if (m3u8Res.statusCode !== 200 && m3u8Res.statusCode !== 206) {
 					m3u8Res.resume()
 					clearInterval(recordInterval)
+					this.outputFileStream?.write('#EXT-X-ENDLIST')
+					this.outputFileStream?.close()
 					this.emit('RecordStop', 1)
 					return
 				}
