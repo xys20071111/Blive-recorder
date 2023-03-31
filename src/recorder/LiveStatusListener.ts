@@ -6,7 +6,7 @@ import { printLog, request } from '../utils'
 
 export default class LiveStatusLinstener extends EventEmitter{
 	private room: RoomConfig
-	private danmakuReceiver: DanmakuReceiver | undefined
+	private danmakuReceiver?: DanmakuReceiver
 	private counter = 0
 	private isLiving = false
 

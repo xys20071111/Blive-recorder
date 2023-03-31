@@ -73,6 +73,7 @@ class Recorder extends EventEmitter {
 					clearInterval(recordInterval)
 					this.outputFileStream?.write('#EXT-X-ENDLIST')
 					this.outputFileStream?.close()
+					this.isFirstRequest = true
 					this.emit('RecordStop', 1)
 					return
 				}

@@ -22,7 +22,7 @@ enum DANMAKU_TYPE {
 }
 
 class DanmakuReceiver extends EventEmitter {
-	private socket: WebSocket | null = null
+	private socket?: WebSocket
 	private roomId: number
 	constructor(roomId: number) {
 		super()
@@ -97,57 +97,60 @@ class DanmakuReceiver extends EventEmitter {
 		// 弹幕事件处理
 		const packetProtocol = msg.readInt16BE(6)
 		const packetType = msg.readInt32BE(8)
-		const packetPayload: Buffer = msg.slice(16)
-		let jsonData: any
+		const packetPayload: Buffer = msg.subarray(16)
 		switch (packetType) {
-		case DANMAKU_TYPE.HEARTBEAT_REPLY:
-			// 心跳包，不做处理
-			break
-		case DANMAKU_TYPE.AUTH_REPLY:
-		{
-			printLog(`房间 ${this.roomId} 通过认证`)
-			// 认证通过，每30秒发一次心跳包
-			const heartbeat = setInterval(() => {
-				const heartbeatPayload = '陈睿你妈死了'
-				if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-					this.socket.send(this.generatePacket(1, 2, heartbeatPayload))
-				} else {
-					clearInterval(heartbeat)
-					this.emit('close')
-				}
-			}, 30000)
-			this.emit('connected')
-			break
-		}
-		case DANMAKU_TYPE.DATA:
-			switch (packetProtocol) {
-			case DANMAKU_PROTOCOL.JSON:
-				// 这些数据大都没用，但还是留着吧
-				jsonData = JSON.parse(packetPayload.toString('utf-8'))
-				this.emit(jsonData.cmd, jsonData.data)
+			case DANMAKU_TYPE.HEARTBEAT_REPLY:
+				// 心跳包，不做处理
 				break
-			case DANMAKU_PROTOCOL.BROTLI:
-				zlib.brotliDecompress(packetPayload, (err, result) => {
-					if (err) {
-						console.warn(err)
-					}
-					let offset = 0
-					while (offset < result.length) {
-						const length = result.readUInt32BE(offset)
-						const packetData = result.slice(offset + 16, offset + length)
-						const data = JSON.parse(packetData.toString('utf8'))
-						const cmd = data.cmd.split(':')[0]
-						this.emit(cmd, (data.info || data.data))
-						offset += length
-					}
-				})
+			case DANMAKU_TYPE.AUTH_REPLY:
+				{
+					printLog(`房间 ${this.roomId} 通过认证`)
+					// 认证通过，每30秒发一次心跳包
+					const heartbeat = setInterval(() => {
+						const heartbeatPayload = '陈睿你妈死了'
+						if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+							this.socket.send(this.generatePacket(1, 2, heartbeatPayload))
+						} else {
+							clearInterval(heartbeat)
+							this.emit('close')
+						}
+					}, 30000)
+					this.emit('connected')
+					break
+				}
+			case DANMAKU_TYPE.DATA:
+				switch (packetProtocol) {
+					case DANMAKU_PROTOCOL.JSON:
+						{
+							// 这些数据大都没用，但还是留着吧
+							let jsonData = JSON.parse(packetPayload.toString('utf-8'))
+							this.emit(jsonData.cmd, jsonData.data)
+							break
+						}
+					case DANMAKU_PROTOCOL.BROTLI:
+						{
+							zlib.brotliDecompress(packetPayload, (err, result) => {
+								if (err) {
+									console.warn(err)
+								}
+								let offset = 0
+								while (offset < result.length) {
+									const length = result.readUInt32BE(offset)
+									const packetData = result.subarray(offset + 16, offset + length)
+									const data = JSON.parse(packetData.toString('utf8'))
+									const cmd = data.cmd.split(':')[0]
+									this.emit(cmd, (data.info || data.data))
+									offset += length
+								}
+							})
+							break
+						}
+					default:
+						break
+				}
 				break
 			default:
-				break
-			}
-			break
-		default:
-			printLog('房间 ${this.roomId} 什么鬼，没见过这种包')
+				printLog(`房间 ${this.roomId} 什么鬼，没见过这种包`)
 		}
 	}
 
