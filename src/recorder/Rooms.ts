@@ -40,7 +40,9 @@ class Room {
 			if (code === 2) {
 				this.recorder?.createFileStream()
 			}
-			this.liveStatusListener.tryRestartRecording()
+			setTimeout(() => {
+				this.liveStatusListener.tryRestartRecording()
+			}, 1000)
 			printLog(`房间 ${config.displayRoomId} 录制结束`)
 		})
 		this.recorder.on('RecordStart', () => {
