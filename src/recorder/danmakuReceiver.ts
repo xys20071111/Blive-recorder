@@ -5,6 +5,7 @@ import * as https from 'https'
 import { EventEmitter } from 'events'
 import * as zlib from 'zlib'
 import { printLog } from '../utils'
+import { Credential } from '../IConfig'
 
 enum DANMAKU_PROTOCOL {
 	JSON = 0,
@@ -24,9 +25,11 @@ enum DANMAKU_TYPE {
 class DanmakuReceiver extends EventEmitter {
 	private socket?: WebSocket
 	private roomId: number
-	constructor(roomId: number) {
+	private credential: Credential
+	constructor(credential: Credential, roomId: number) {
 		super()
 		this.roomId = roomId
+		this.credential = credential
 	}
 
 	public async connect() {
@@ -34,6 +37,7 @@ class DanmakuReceiver extends EventEmitter {
 		const request = https.request(`https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?id=${this.roomId}&type=0`, {
 			method: 'GET',
 			headers: {
+				Cookie: `buvid3=${this.credential.buvid3}; SESSDATA=${this.credential.sessdata}; bili_jct=${this.credential.csrf}`,
 				'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
 				host: 'api.live.bilibili.com',
 			},
@@ -62,7 +66,7 @@ class DanmakuReceiver extends EventEmitter {
 				this.socket.on('open', async () => {
 					// 生成并发送验证包
 					const data = JSON.stringify({
-						roomid: this.roomId, protover: 3, platform: 'web', uid: 0, key: roomConfig.data.token,
+						roomid: this.roomId, protover: 3, platform: 'web', uid: this.credential.uid, key: roomConfig.data.token, buivd3: this.credential.buvid3,
 					})
 					const authPacket = this.generatePacket(1, 7, data)
 					if (this.socket && this.socket.readyState === WebSocket.OPEN) {

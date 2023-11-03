@@ -6,6 +6,7 @@ import { EventEmitter } from 'events'
 import { request, getTimeString } from '../utils'
 import { BliveM3u8Parser } from '../utils/Blivem3u8Parser'
 import { downloadFile } from '../utils/downloadFile'
+import { AppConfig } from '../IConfig'
 
 
 class Recorder extends EventEmitter {
@@ -42,22 +43,27 @@ class Recorder extends EventEmitter {
 			qn: 10000,
 			platform: 'web',
 			protocol: '0,1',
-			format: '0,2',
-			codec: '0,1'
+			format: '0,1,2',
+			codec: '0,1',
+			panorama: '1'
 		})).data
-		let streamHost: string = '';
-		let streamParma: string = '';
-		let streamPath: string = '';
-		for (const item of data.playurl_info.playurl.stream) {
-			if (item.protocol_name === 'http_hls') {
-				streamHost = item.format[0].codec[0].url_info[0].host
-				streamParma = item.format[0].codec[0].url_info[0].extra
-				streamPath = item.format[0].codec[0].base_url
+		let streamHost: string = ''
+		let streamParma: string = ''
+		let streamPath: string = ''
+		for (const streamInfo of data.playurl_info.playurl.stream) {
+			if (streamInfo.protocol_name === 'http_hls') {
+				for (const streamItem of streamInfo.format) {
+					console.log(streamItem)
+					if (streamItem.format_name === 'fmp4' && streamItem.codec[0]['current_qn'] === 10000) {
+						streamHost = streamItem.codec[0].url_info[0].host
+						streamParma = streamItem.codec[0].url_info[0].extra
+						streamPath = streamItem.codec[0].base_url
+					}
+				}
 			}
 		}
 		const streamUrl = `${streamHost}${streamPath}${streamParma}`
-		console.log(streamUrl)
-		if(!streamUrl || streamUrl.length < 10) {
+		if (!streamUrl || streamUrl.length < 10) {
 			this.emit('RecordStop', 1)
 			return
 		}
@@ -66,6 +72,7 @@ class Recorder extends EventEmitter {
 		const recordInterval = setInterval(() => {
 			const m3u8Req = https.request(streamUrl, {
 				headers: {
+					Cookie: `buvid3=${AppConfig.credential.buvid3}; SESSDATA=${AppConfig.credential.sessdata}; bili_jct=${AppConfig.credential.csrf};`,
 					'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
 					'Referer': 'https://live.bilibili.com',
 					'Origin': 'https://live.bilibili.com'
@@ -87,13 +94,14 @@ class Recorder extends EventEmitter {
 				m3u8Res.on('end', () => {
 					const m3u8 = BliveM3u8Parser.parse(data)
 					if (this.isFirstRequest) {
-						this.isFirstRequest = false;
+						this.isFirstRequest = false
 						this.outputFileStream?.write(`#EXT-X-MEDIA-SEQUENCE:${m3u8.clips[0].filename.replace('.m4s', '')}\n`)
 						this.outputFileStream?.write(`#EXT-X-MAP:URI="${this.clipDir}${m3u8.mapFile}"\n`)
 						downloadFile(streamUrl.replace('index.m3u8', m3u8.mapFile), `${this.clipDir}${m3u8.mapFile}`, {
 							'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
 							'Referer': 'https://live.bilibili.com',
-							'Origin': 'https://live.bilibili.com'
+							'Origin': 'https://live.bilibili.com',
+							Cookie: `buvid3=${AppConfig.credential.buvid3}; SESSDATA=${AppConfig.credential.sessdata}; bili_jct=${AppConfig.credential.csrf};`,
 						})
 					}
 					for (const item of m3u8.clips) {
@@ -103,14 +111,15 @@ class Recorder extends EventEmitter {
 							downloadFile(streamUrl.replace('index.m3u8', item.filename), `${this.clipDir}${item.filename}`, {
 								'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
 								'Referer': 'https://live.bilibili.com',
-								'Origin': 'https://live.bilibili.com'
+								'Origin': 'https://live.bilibili.com',
+								Cookie: `buvid3=${AppConfig.credential.buvid3}; SESSDATA=${AppConfig.credential.sessdata}; bili_jct=${AppConfig.credential.csrf};`,
 							})
 						}
 					}
 				})
 			})
 			m3u8Req.end()
-		}, 5000);
+		}, 5000)
 	}
 }
 

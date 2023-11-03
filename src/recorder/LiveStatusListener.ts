@@ -1,10 +1,10 @@
 import EventEmitter from 'events'
 import DanmakuReceiver from './danmakuReceiver'
-import { RoomConfig } from '../IConfig'
+import { RoomConfig, AppConfig } from '../IConfig'
 import { Msg, RoomInfo } from '../IMsg'
 import { printLog, request } from '../utils'
 
-export default class LiveStatusLinstener extends EventEmitter{
+export default class LiveStatusLinstener extends EventEmitter {
 	private room: RoomConfig
 	private danmakuReceiver?: DanmakuReceiver
 	private counter = 0
@@ -23,9 +23,9 @@ export default class LiveStatusLinstener extends EventEmitter{
 			if (roomInfo.live_status === 1) {
 				this.emit('LiveStart')
 			}
-			this.danmakuReceiver = new DanmakuReceiver(this.room.realRoomId)
+			this.danmakuReceiver = new DanmakuReceiver(AppConfig.credential, this.room.realRoomId)
 			this.danmakuReceiver.on('LIVE', () => {
-				if(this.counter === 0) {
+				if (this.counter === 0) {
 					this.counter++
 					return
 				}
