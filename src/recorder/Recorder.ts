@@ -53,7 +53,6 @@ class Recorder extends EventEmitter {
 		for (const streamInfo of data.playurl_info.playurl.stream) {
 			if (streamInfo.protocol_name === 'http_hls') {
 				for (const streamItem of streamInfo.format) {
-					console.log(streamItem)
 					if (streamItem.format_name === 'fmp4' && streamItem.codec[0]['current_qn'] === 10000) {
 						streamHost = streamItem.codec[0].url_info[0].host
 						streamParma = streamItem.codec[0].url_info[0].extra
