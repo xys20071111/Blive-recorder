@@ -24,9 +24,13 @@ class Recorder extends EventEmitter {
 		this.outputPath = outputPath
 	}
 
-	public createFileStream() {
+	public async createFileStream() {
 		console.log('创建新文件')
-		this.outputFile = `${this.outputPath}/${getTimeString()}.m3u8`
+		const title = (await request('/xlive/web-room/v1/index/getRoomBaseInfo', 'GET', {
+			room_ids: this.roomId,
+			req_biz: 'BiLive'
+		}))['data']['by_room_ids'][this.roomId.toString()].title
+		this.outputFile = `${this.outputPath}/${getTimeString()}-${title}.m3u8`
 		this.outputFileStream = createWriteStream(this.outputFile)
 		this.clipDir = this.outputFile.replace('.m3u8', '/')
 		if (!existsSync(this.clipDir)) {
@@ -36,37 +40,42 @@ class Recorder extends EventEmitter {
 	}
 
 	async start() {
-		const data = (await request('/xlive/web-room/v2/index/getRoomPlayInfo', 'GET', {
-			room_id: this.roomId,
-			no_playurl: 0,
-			mask: 1,
-			qn: 10000,
-			platform: 'web',
-			protocol: '0,1',
-			format: '0,1,2',
-			codec: '0,1',
-			panorama: '1'
-		})).data
 		let streamHost: string = ''
 		let streamParma: string = ''
 		let streamPath: string = ''
-		for (const streamInfo of data.playurl_info.playurl.stream) {
-			if (streamInfo.protocol_name === 'http_hls') {
-				for (const streamItem of streamInfo.format) {
-					if (streamItem.format_name === 'fmp4' && streamItem.codec[0]['current_qn'] === 10000) {
-						streamHost = streamItem.codec[0].url_info[0].host
-						streamParma = streamItem.codec[0].url_info[0].extra
-						streamPath = streamItem.codec[0].base_url
+		let streamUrl: string = ''
+		try {
+			const data = (await request('/xlive/web-room/v2/index/getRoomPlayInfo', 'GET', {
+				room_id: this.roomId,
+				no_playurl: 0,
+				mask: 1,
+				qn: 10000,
+				platform: 'web',
+				protocol: '0,1',
+				format: '0,1,2',
+				codec: '0,1',
+				panorama: '1'
+			})).data
+			for (const streamInfo of data.playurl_info.playurl.stream) {
+				if (streamInfo.protocol_name === 'http_hls') {
+					for (const streamItem of streamInfo.format) {
+						if (streamItem.format_name === 'fmp4' && streamItem.codec[0]['current_qn'] === 10000) {
+							streamHost = streamItem.codec[0].url_info[0].host
+							streamParma = streamItem.codec[0].url_info[0].extra
+							streamPath = streamItem.codec[0].base_url
+						}
 					}
 				}
 			}
-		}
-		const streamUrl = `${streamHost}${streamPath}${streamParma}`
-		if (!streamUrl || streamUrl.length < 10) {
+			streamUrl = `${streamHost}${streamPath}${streamParma}`
+			if (!streamUrl || streamUrl.length < 10) {
+				this.emit('RecordStop', 1)
+				return
+			}
+		} catch {
 			this.emit('RecordStop', 1)
-			return
 		}
-		this.createFileStream()
+		await this.createFileStream()
 		this.outputFileStream!.write('#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-START:TIME-OFFSET=0\n#EXT-X-TARGETDURATION:1\n')
 		const recordInterval = setInterval(() => {
 			const m3u8Req = https.request(streamUrl, {
@@ -118,7 +127,7 @@ class Recorder extends EventEmitter {
 				})
 			})
 			m3u8Req.end()
-		}, 5000)
+		}, 3500)
 	}
 }
 

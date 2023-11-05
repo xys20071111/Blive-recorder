@@ -43,12 +43,14 @@ export class BliveM3u8Parser {
         const lines = m3u8String.split('\n')
         const mapFile = lines[5].slice(16).replace('"', '')
         const clips: Array<IClip> = []
-        for (let i = 6; i < lines.length; i += 2) {
-            const clip: IClip = {
-                info: lines[i],
-                filename: lines[i + 1]
+        for (let i = 0; i < lines.length; i += 1) {
+            if (lines[i].startsWith('#EXTINF')) {
+                const clip: IClip = {
+                    info: lines[i],
+                    filename: lines[i + 1]
+                }
+                clips.push(clip)
             }
-            clips.push(clip)
         }
         return {
             mapFile,
