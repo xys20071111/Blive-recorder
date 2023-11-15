@@ -16,8 +16,11 @@
     "typescript": "^4.7.3"
   },
   "scripts": {
-    "start": "node . config.json",
+    "start": "tsc && node . config.json",
     "prepack": "tsc"
   },
-  "files": ["dist", "rooms"]
+  "files": [
+    "dist",
+    "rooms"
+  ]
 }

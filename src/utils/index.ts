@@ -1,5 +1,7 @@
 export { FormatString } from './StringFormatter'
 export { getTimeString } from './Time'
-export { printLog } from './PrintLog'
+export { printLog, printError, printWarning } from './PrintLog'
 export { request } from './Requester'
 export { filterInt } from './FilterInt'
+export { downloadFile } from './downloadFile'
+export { BliveM3u8Parser } from './Blivem3u8Parser'

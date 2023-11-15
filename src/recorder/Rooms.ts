@@ -16,7 +16,7 @@ class Room {
 		this.createNewRecorder(config)
 		this.liveStatusListener.on('LiveStart', (isNewLive: boolean) => {
 			this.recorder?.start()
-			if(isNewLive) {
+			if (isNewLive) {
 				printLog(`房间 ${config.displayRoomId} 开始直播`)
 				this.isLiving = true
 			}
@@ -37,9 +37,6 @@ class Room {
 		this.recorder = new Recorder(config.realRoomId, `${AppConfig.output}${config.name}-${config.displayRoomId}`)
 		this.recorder.on('RecordStop', (code) => {
 			this.isRecording = false
-			if (code === 2) {
-				this.recorder?.createFileStream()
-			}
 			setTimeout(() => {
 				this.liveStatusListener.tryRestartRecording()
 			}, 1000)
@@ -66,14 +63,14 @@ export function initRoomRecorder(config: RoomConfig) {
 }
 
 export function getLivingStatus(room: number): boolean {
-	if(roomMap.has(room)) {
+	if (roomMap.has(room)) {
 		return roomMap.get(room)!.getLiving()
 	}
 	return false
 }
 
 export function getRecordingStatus(room: number): boolean {
-	if(roomMap.has(room)) {
+	if (roomMap.has(room)) {
 		return roomMap.get(room)!.getRecording()
 	}
 	return false

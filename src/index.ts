@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'fs'
 import { AppConfig } from './IConfig'
 import App from './App'
 import { initRoomRecorder } from './recorder/Rooms'
+import { printLog } from './utils'
 
 readdirSync('./rooms').forEach((v) => {
 	if (v.endsWith('.json')) {
@@ -9,4 +10,6 @@ readdirSync('./rooms').forEach((v) => {
 	}
 })
 
-App.listen(AppConfig.port)
+App.listen(AppConfig.port, () => {
+	printLog(`程序正在监听端口 ${AppConfig.port}`)
+})

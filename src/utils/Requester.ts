@@ -1,5 +1,6 @@
 import https from 'https'
 import { AppConfig } from '../IConfig'
+import { printError } from './PrintLog'
 
 const POST_HEADER = {
 	Cookie: `buvid3=${AppConfig.credential.buvid3}; SESSDATA=${AppConfig.credential.sessdata}; bili_jct=${AppConfig.credential.csrf}`,
@@ -33,7 +34,8 @@ function request(path: string, method: 'GET' | 'POST', data: object): Promise<an
 			path: method === 'POST' ? path : pathBuilder(path, data),
 			headers: method === 'POST' ? POST_HEADER : GET_HEADER
 		})
-		req.on('error', () => {
+		req.on('error', (err) => {
+			printError(`${path} ${err}`)
 			reject(2)
 		})
 		req.on('response', (stream) => {

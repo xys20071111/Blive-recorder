@@ -20,9 +20,6 @@ export default class LiveStatusLinstener extends EventEmitter {
 			id: this.room.displayRoomId
 		}).then((data: Msg) => {
 			const roomInfo: RoomInfo = data.data as RoomInfo
-			if (roomInfo.live_status === 1) {
-				this.emit('LiveStart')
-			}
 			this.danmakuReceiver = new DanmakuReceiver(AppConfig.credential, this.room.realRoomId)
 			this.danmakuReceiver.on('LIVE', () => {
 				if (this.counter === 0) {

@@ -4,7 +4,7 @@ import { WebSocket } from 'ws'
 import * as https from 'https'
 import { EventEmitter } from 'events'
 import * as zlib from 'zlib'
-import { printLog } from '../utils'
+import { printLog, printWarning } from '../utils'
 import { Credential } from '../IConfig'
 
 enum DANMAKU_PROTOCOL {
@@ -41,6 +41,9 @@ class DanmakuReceiver extends EventEmitter {
 				'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
 				host: 'api.live.bilibili.com',
 			},
+		})
+		request.on('error', (err) => {
+			printWarning(`房间${this.roomId} 连接失败, ${err}`)
 		})
 		request.on('response', (response) => {
 			if (response.statusCode !== 200) {
@@ -135,7 +138,7 @@ class DanmakuReceiver extends EventEmitter {
 						{
 							zlib.brotliDecompress(packetPayload, (err, result) => {
 								if (err) {
-									console.warn(err)
+									printWarning(err)
 								}
 								let offset = 0
 								while (offset < result.length) {
